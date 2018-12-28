@@ -12,14 +12,25 @@ class MYPROJECT2_API AEnemy : public AActor
 	GENERATED_BODY()
 
 		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
-		class UCapsuleComponent * capsule;
+		class UBoxComponent * box;
 
 		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 		class USkeletalMeshComponent * mesh;
+
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health, meta = (AllowPrivateAccess = "true"))
+			class ULife* _health;
+
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health, meta = (AllowPrivateAccess = "true"))
+			class UTextRenderComponent* text;
+
+		UFUNCTION(BlueprintCallable, Category = Damage)
+			void Damaged(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
 	
 public:	
 	// Sets default values for this actor's properties
 	AEnemy();
+
+	float DamageCooldown;
 
 protected:
 	// Called when the game starts or when spawned
@@ -28,7 +39,7 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
+	
 	
 	
 };

@@ -3,12 +3,19 @@
 #include "MyProject2Character.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
-#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/InputComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/BoxComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Life.h"
+#include "Components/TextRenderComponent.h"
+#include "UObject/ConstructorHelpers.h"
+#include "Animation/AnimInstance.h"
+#include "UObject/UnrealType.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMyProject2Character
@@ -18,6 +25,14 @@ AMyProject2Character::AMyProject2Character()
 	PrimaryActorTick.bCanEverTick = true;
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+	GetCapsuleComponent()->SetNotifyRigidBodyCollision(true);
+	GetCapsuleComponent()->SetGenerateOverlapEvents(true);
+	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AMyProject2Character::OnHit);
+
+
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> CharacterMesh(TEXT("/Game/Mannequin/Character/Mesh/SK_Mannequin.SK_Mannequin"));
+	GetMesh()->SetSkeletalMesh(CharacterMesh.Object);
+	GetMesh()->SetRelativeLocation(FVector(0,0,-GetCapsuleComponent()->CalcBounds(GetCapsuleComponent()->GetComponentTransform()).BoxExtent.Z));
 
 	// set our turn rates for input
 	BaseTurnRate = 45.f;
@@ -47,9 +62,40 @@ AMyProject2Character::AMyProject2Character()
 
 	_health = CreateDefaultSubobject<ULife>(TEXT("Health"));
 	_health->SetHealth(100);
+
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SwordMesh(TEXT("/Game/InfinityBladeWeapons/Weapons/Blade/Swords/Blade_DragonSword/SK_Blade_DragonSword.SK_Blade_DragonSword"));
+
+	Sword = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Sword"));
+	Sword->SetSkeletalMesh(SwordMesh.Object);
+	Sword->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "Sword");
+
+	SwordCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("SwordCollision"));
+	SwordCollision->AttachToComponent(Sword, FAttachmentTransformRules::SnapToTargetIncludingScale, "SwordCollision");
+	SwordCollision->SetBoxExtent(Sword->CalcBounds(Sword->GetComponentTransform()).BoxExtent / 2);
+	SwordCollision->SetRelativeLocation(FVector(0, 0, Sword->CalcBounds(Sword->GetComponentTransform()).BoxExtent.Z/2));
+	SwordCollision->SetGenerateOverlapEvents(true);
+	SwordCollision->SetNotifyRigidBodyCollision(true);
+	SwordCollision->CanCharacterStepUpOn = ECanBeCharacterBase::ECB_No;
+	SwordCollision->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
+	SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	SwordCollision->SetCollisionEnabled(ECollisionEnabled::Type::QueryOnly);
+	
+	
+	text = CreateDefaultSubobject<UTextRenderComponent>(TEXT("HealthDisplay"));
+	text->AttachTo(RootComponent);
+	text->SetTextRenderColor(FColor(0,255,0,100));
+	text->SetText(FString("Health: ") + FString::SanitizeFloat(_health->Health));
+	text->WorldSize = 15.0f;
+	text->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
+	text->bAbsoluteRotation = true;
+	text->SetRelativeLocation(FVector(0,0, GetMesh()->CalcBounds(GetMesh()->GetComponentTransform()).BoxExtent.Z));
 	
 
 	GetCharacterMovement()->MaxWalkSpeed = 150.0f;
+
+	DamageCooldown = 0.0f;
+
+	attack = false;
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
@@ -90,8 +136,18 @@ void AMyProject2Character::SetupPlayerInputComponent(class UInputComponent* Play
 void AMyProject2Character::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (DamageCooldown > 0)
+	if (DamageCooldown > 0.0f)
 		DamageCooldown -= DeltaTime;
+
+	if (BPbool != NULL)
+	{
+		if (BPbool->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == true)
+			SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore); 
+		else
+			SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+	}
+	
+	text->SetWorldRotation(FQuat(FRotator(0,-180 + Controller->GetControlRotation().Yaw,0)));
 }
 
 void AMyProject2Character::OnResetVR()
@@ -128,6 +184,7 @@ void AMyProject2Character::MoveForward(float Value)
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		
 
 		// get forward vector
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
@@ -153,6 +210,8 @@ void AMyProject2Character::MoveRight(float Value)
 void AMyProject2Character::Attack()
 {
 	attack = true;
+	if (BPbool == NULL)
+		BPbool = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "StopAttack");
 }
 
 void AMyProject2Character::StopAttack()
@@ -170,9 +229,9 @@ void AMyProject2Character::Run(float Value)
 		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
 }
 
-void AMyProject2Character::OnHit()
+void AMyProject2Character::OnHit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
 {
-	if (DamageCooldown <= 0.0f)
+	if ((DamageCooldown <= 0.0f) && (OtherComp != SwordCollision))
 	{
 		Damage();
 	}
@@ -182,4 +241,5 @@ void AMyProject2Character::Damage()
 {
 	_health->UpdateHealth(5.0f);
 	DamageCooldown = 3.0f;
+	text->SetText(FString("Health: ") + FString::SanitizeFloat(_health->Health));
 }

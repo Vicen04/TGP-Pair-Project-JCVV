@@ -20,10 +20,22 @@ class AMyProject2Character : public ACharacter
 	class UCameraComponent* FollowCamera;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapons, meta = (AllowPrivateAccess = "true"))
-	class USceneComponent* Sword;
+	class USkeletalMeshComponent* Sword;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapons, meta = (AllowPrivateAccess = "true"))
+		class UBoxComponent* SwordCollision;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health, meta = (AllowPrivateAccess = "true"))
 	class ULife* _health;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health, meta = (AllowPrivateAccess = "true"))
+	class UTextRenderComponent* text;
+
+	UFUNCTION(BlueprintCallable, Category = Damage)
+	void OnHit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AnimationValue, meta = (AllowPrivateAccess = "true"))
+	UBoolProperty* BPbool;
 
 public:
 	AMyProject2Character();
@@ -36,10 +48,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
 
+	UPROPERTY(BlueprintReadOnly, Category = attack)
 	bool attack;
-	float DamageCooldown;
 
-	void OnHit();
+	float DamageCooldown;
 	void Damage();
 
 protected:
