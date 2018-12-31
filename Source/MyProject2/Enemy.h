@@ -30,6 +30,8 @@ public:
 	// Sets default values for this actor's properties
 	AEnemy();
 
+	float damage;
+
 	float DamageCooldown;
 
 protected:

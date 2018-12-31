@@ -16,6 +16,8 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Animation/AnimInstance.h"
 #include "UObject/UnrealType.h"
+#include "Enemy.h"
+#include "Kismet/GameplayStatics.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMyProject2Character
@@ -27,8 +29,7 @@ AMyProject2Character::AMyProject2Character()
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 	GetCapsuleComponent()->SetNotifyRigidBodyCollision(true);
 	GetCapsuleComponent()->SetGenerateOverlapEvents(true);
-	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AMyProject2Character::OnHit);
-
+	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AMyProject2Character::OnHit);	
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> CharacterMesh(TEXT("/Game/Mannequin/Character/Mesh/SK_Mannequin.SK_Mannequin"));
 	GetMesh()->SetSkeletalMesh(CharacterMesh.Object);
@@ -95,7 +96,9 @@ AMyProject2Character::AMyProject2Character()
 
 	DamageCooldown = 0.0f;
 
-	attack = false;
+	
+	strongAttack = false;
+	weakAttack = false;
 	defend = false;
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
@@ -111,7 +114,8 @@ void AMyProject2Character::SetupPlayerInputComponent(class UInputComponent* Play
 	check(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AMyProject2Character::Attack);
+	PlayerInputComponent->BindAction("StrongAttack", IE_Pressed, this, &AMyProject2Character::StrongAttack);
+	PlayerInputComponent->BindAction("WeakAttack", IE_Pressed, this, &AMyProject2Character::WeakAttack);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMyProject2Character::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMyProject2Character::MoveRight);
@@ -152,7 +156,7 @@ void AMyProject2Character::Tick(float DeltaTime)
 		if (BPattack->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == true)
 		{
 			SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-			attack = false;
+			StopAttack();
 		}
 		else
 			SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
@@ -218,9 +222,34 @@ void AMyProject2Character::MoveRight(float Value)
 	}
 }
 
-void AMyProject2Character::Attack()
+void AMyProject2Character::StrongAttack()
 {
-	attack = true;
+	strongAttack = true;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemy::StaticClass(), foundEnemies);
+
+	for (AActor* enemies : foundEnemies)
+	{
+		enemy = Cast<AEnemy>(enemies);
+		enemy->damage = 10.0f;
+	}
+}
+
+void AMyProject2Character::WeakAttack()
+{
+	weakAttack = true;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemy::StaticClass(), foundEnemies);
+
+	for (AActor* enemies : foundEnemies)
+	{
+		enemy = Cast<AEnemy>(enemies);
+		enemy->damage = 5.0f;
+	}
+}
+
+void AMyProject2Character::StopAttack()
+{
+	strongAttack = false;
+	weakAttack = false;
 }
 
 void AMyProject2Character::Defend(float Value)
@@ -236,7 +265,7 @@ void AMyProject2Character::Run(float Value)
 	if (Value != 0)	
 		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
 	else
-		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
+		GetCharacterMovement()->MaxWalkSpeed = 200.0f;
 }
 
 void AMyProject2Character::OnHit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
@@ -257,7 +286,7 @@ void AMyProject2Character::Damage()
 			_health->UpdateHealth(5.0f/2.0f);
 	}
 	else
-		Attack();
+		StrongAttack();
 	DamageCooldown = 3.0f;
 	text->SetText(FString("Health: ") + FString::SanitizeFloat(_health->Health));
 }

@@ -40,6 +40,9 @@ class AMyProject2Character : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AnimationValue, meta = (AllowPrivateAccess = "true"))
 		UBoolProperty* BPcounter;
 
+	class AEnemy* enemy;
+	TArray<AActor*> foundEnemies;
+
 public:
 	AMyProject2Character();
 
@@ -52,7 +55,13 @@ public:
 	float BaseLookUpRate;
 
 	UPROPERTY(BlueprintReadOnly, Category = attack)
-	bool attack;
+	bool strongAttack;
+
+	UPROPERTY(BlueprintReadOnly, Category = attack)
+	bool weakAttack;
+
+	UFUNCTION(BlueprintCallable, Category = Damage)
+		bool GetStrongAttack() { return strongAttack; };
 
 	UPROPERTY(BlueprintReadOnly, Category = attack)
 	bool defend;
@@ -74,7 +83,9 @@ protected:
 
 	void Run(float Value);
 
-	void Attack();
+	void StrongAttack();
+	void WeakAttack();
+	void StopAttack();
 	void Defend(float value);
 
 	/** 

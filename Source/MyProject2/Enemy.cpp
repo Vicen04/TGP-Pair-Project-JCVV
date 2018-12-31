@@ -40,6 +40,8 @@ AEnemy::AEnemy()
 
 	DamageCooldown = 0.0f;
 
+	damage = 0.0f;
+
 	box->OnComponentBeginOverlap.AddDynamic(this, &AEnemy::Damaged);
 }
 
@@ -63,9 +65,9 @@ void AEnemy::Tick(float DeltaTime)
 
 void AEnemy::Damaged(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
 {
-	if (DamageCooldown <= 0.0f)
+	if (DamageCooldown <= 0.0f) 
 	{
-		_health->UpdateHealth(10.0f);
+	    _health->UpdateHealth(damage);
 		DamageCooldown = 2.0f;
 		text->SetText(FString("Health: ") + FString::SanitizeFloat(_health->Health));
 	}
