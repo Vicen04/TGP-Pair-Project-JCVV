@@ -35,7 +35,10 @@ class AMyProject2Character : public ACharacter
 	void OnHit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AnimationValue, meta = (AllowPrivateAccess = "true"))
-	UBoolProperty* BPbool;
+	UBoolProperty* BPattack;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AnimationValue, meta = (AllowPrivateAccess = "true"))
+		UBoolProperty* BPcounter;
 
 public:
 	AMyProject2Character();
@@ -51,7 +54,11 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = attack)
 	bool attack;
 
+	UPROPERTY(BlueprintReadOnly, Category = attack)
+	bool defend;
+
 	float DamageCooldown;
+
 	void Damage();
 
 protected:
@@ -68,8 +75,7 @@ protected:
 	void Run(float Value);
 
 	void Attack();
-
-	void StopAttack();
+	void Defend(float value);
 
 	/** 
 	 * Called via input to turn at a given rate. 
@@ -103,5 +109,6 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 	virtual void Tick(float DeltaTime) override;
+	virtual void BeginPlay() override;
 };
 

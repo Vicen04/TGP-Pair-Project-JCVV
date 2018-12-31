@@ -96,6 +96,7 @@ AMyProject2Character::AMyProject2Character()
 	DamageCooldown = 0.0f;
 
 	attack = false;
+	defend = false;
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
@@ -111,11 +112,11 @@ void AMyProject2Character::SetupPlayerInputComponent(class UInputComponent* Play
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AMyProject2Character::Attack);
-	PlayerInputComponent->BindAction("Attack", IE_Released, this, &AMyProject2Character::StopAttack);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMyProject2Character::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMyProject2Character::MoveRight);
 	PlayerInputComponent->BindAxis("Sprint", this, &AMyProject2Character::Run);
+	PlayerInputComponent->BindAxis("Defend", this, &AMyProject2Character::Defend);
 
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
@@ -133,16 +134,26 @@ void AMyProject2Character::SetupPlayerInputComponent(class UInputComponent* Play
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AMyProject2Character::OnResetVR);
 }
 
+void AMyProject2Character::BeginPlay()
+{
+	Super::BeginPlay();
+	BPattack = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "StopAttack");
+	BPcounter = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "Counter");
+}
+
 void AMyProject2Character::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	if (DamageCooldown > 0.0f)
 		DamageCooldown -= DeltaTime;
 
-	if (BPbool != NULL)
+	if (BPattack != NULL)
 	{
-		if (BPbool->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == true)
-			SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore); 
+		if (BPattack->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == true)
+		{
+			SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+			attack = false;
+		}
 		else
 			SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
 	}
@@ -194,7 +205,7 @@ void AMyProject2Character::MoveForward(float Value)
 
 void AMyProject2Character::MoveRight(float Value)
 {
-	if ( (Controller != NULL) && (Value != 0.0f) )
+	if ((Controller != NULL) && (Value != 0.0f))
 	{
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -210,21 +221,20 @@ void AMyProject2Character::MoveRight(float Value)
 void AMyProject2Character::Attack()
 {
 	attack = true;
-	if (BPbool == NULL)
-		BPbool = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "StopAttack");
 }
 
-void AMyProject2Character::StopAttack()
+void AMyProject2Character::Defend(float Value)
 {
-	attack = false;
+	if (Value != 0)
+		defend = true;
+	else
+		defend = false;
 }
 
 void AMyProject2Character::Run(float Value)
 {
-	if (Value != 0)
-	{
+	if (Value != 0)	
 		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
-	}
 	else
 		GetCharacterMovement()->MaxWalkSpeed = 150.0f;
 }
@@ -239,7 +249,15 @@ void AMyProject2Character::OnHit(UPrimitiveComponent* OverlappedComponent, AActo
 
 void AMyProject2Character::Damage()
 {
-	_health->UpdateHealth(5.0f);
+	if (BPcounter->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == false)
+	{
+		if (defend == false)
+			_health->UpdateHealth(5.0f);
+		else
+			_health->UpdateHealth(5.0f/2.0f);
+	}
+	else
+		Attack();
 	DamageCooldown = 3.0f;
 	text->SetText(FString("Health: ") + FString::SanitizeFloat(_health->Health));
 }
