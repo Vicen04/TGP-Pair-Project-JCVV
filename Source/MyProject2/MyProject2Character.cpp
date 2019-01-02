@@ -16,7 +16,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Animation/AnimInstance.h"
 #include "UObject/UnrealType.h"
-#include "Enemy.h"
+#include "EnemyClass.h"
 #include "Kismet/GameplayStatics.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -225,11 +225,11 @@ void AMyProject2Character::MoveRight(float Value)
 void AMyProject2Character::StrongAttack()
 {
 	strongAttack = true;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemy::StaticClass(), foundEnemies);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemyClass::StaticClass(), foundEnemies);
 
 	for (AActor* enemies : foundEnemies)
 	{
-		enemy = Cast<AEnemy>(enemies);
+		enemy = Cast<AEnemyClass>(enemies);
 		enemy->damage = 10.0f;
 	}
 }
@@ -237,11 +237,11 @@ void AMyProject2Character::StrongAttack()
 void AMyProject2Character::WeakAttack()
 {
 	weakAttack = true;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemy::StaticClass(), foundEnemies);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEnemyClass::StaticClass(), foundEnemies);
 
 	for (AActor* enemies : foundEnemies)
 	{
-		enemy = Cast<AEnemy>(enemies);
+		enemy = Cast<AEnemyClass>(enemies);
 		enemy->damage = 5.0f;
 	}
 }
@@ -272,6 +272,7 @@ void AMyProject2Character::OnHit(UPrimitiveComponent* OverlappedComponent, AActo
 {
 	if ((DamageCooldown <= 0.0f) && (OtherComp != SwordCollision))
 	{
+		enemy = Cast<AEnemyClass>(OtherActor);
 		Damage();
 	}
 }
@@ -281,9 +282,9 @@ void AMyProject2Character::Damage()
 	if (BPcounter->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == false)
 	{
 		if (defend == false)
-			_health->UpdateHealth(5.0f);
+			_health->UpdateHealth(enemy->attackDamage);
 		else
-			_health->UpdateHealth(5.0f/2.0f);
+			_health->UpdateHealth(enemy->attackDamage/2.0f);
 	}
 	else
 		StrongAttack();

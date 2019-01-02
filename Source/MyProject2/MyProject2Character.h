@@ -40,7 +40,7 @@ class AMyProject2Character : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AnimationValue, meta = (AllowPrivateAccess = "true"))
 		UBoolProperty* BPcounter;
 
-	class AEnemy* enemy;
+	class AEnemyClass* enemy;
 	TArray<AActor*> foundEnemies;
 
 public:
