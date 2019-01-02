@@ -3,19 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "GameFramework/Character.h"
 #include "Enemy.generated.h"
 
 UCLASS()
-class MYPROJECT2_API AEnemy : public AActor
+class MYPROJECT2_API AEnemy : public ACharacter
 {
 	GENERATED_BODY()
 
 		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
 		class UBoxComponent * box;
-
-		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
-		class USkeletalMeshComponent * mesh;
 
 		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health, meta = (AllowPrivateAccess = "true"))
 			class ULife* _health;
@@ -23,15 +20,27 @@ class MYPROJECT2_API AEnemy : public AActor
 		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health, meta = (AllowPrivateAccess = "true"))
 			class UTextRenderComponent* text;
 
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Health, meta = (AllowPrivateAccess = "true"))
+			class USkeletalMeshComponent * weaponMesh;
+
+		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Collision, meta = (AllowPrivateAccess = "true"))
+			class UBoxComponent * attackCollision;
+
 		UFUNCTION(BlueprintCallable, Category = Damage)
 			void Damaged(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
+
+		UFUNCTION(BlueprintCallable, Category = Damage)
+			void AttackPlayer(class AActor* OtherActor, class UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
 	
 public:	
 	// Sets default values for this actor's properties
 	AEnemy();
 
-	float damage;
+	void Destroy();
 
+	float damage;
+	bool attack;
 	float DamageCooldown;
 
 protected:
