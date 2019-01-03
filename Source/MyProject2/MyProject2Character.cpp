@@ -273,6 +273,7 @@ void AMyProject2Character::OnHit(UPrimitiveComponent* OverlappedComponent, AActo
 	if ((DamageCooldown <= 0.0f) && (OtherComp != SwordCollision))
 	{
 		enemy = Cast<AEnemyClass>(OtherActor);
+		if (enemy != NULL)
 		Damage();
 	}
 }

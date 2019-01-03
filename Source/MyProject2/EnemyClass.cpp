@@ -93,6 +93,7 @@ void AEnemyClass::BeginPlay()
 		attackCollision->SetBoxExtent(FVector(10.0f, 10.0f, 45.0f));
 		attackCollision->SetRelativeLocation(FVector(0, 0, 40.0f));
 		_health->SetHealth(50);
+		text->SetText(FString("Health: ") + FString::SanitizeFloat(_health->Health));
 		BPstopAttack = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "StopAttack");
 		BPdisableMesh = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "disableMesh");
 		BPotherAnimation = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "rolling");
@@ -104,6 +105,7 @@ void AEnemyClass::BeginPlay()
 		attackCollision->SetBoxExtent(FVector(65.0f, 40.0f, 28.0f));
 		attackCollision->SetRelativeLocationAndRotation(FVector(-40.0f, 20.0f, 10.0f), FRotator(-20.0f, -20.0f, 0.0f));
 		_health->SetHealth(70);
+		text->SetText(FString("Health: ") + FString::SanitizeFloat(_health->Health));
 		attackDamage = 7.0f;
 		BPstopAttack = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "StopAttack");
 		BPdisableMesh = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "disableMesh");
