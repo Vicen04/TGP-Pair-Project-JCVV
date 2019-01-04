@@ -31,6 +31,12 @@ class MYPROJECT2_API AEnemyClass : public ACharacter
 	UFUNCTION(BlueprintCallable, Category = Damage)
 		void AttackPlayer(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
 
+	UFUNCTION(BlueprintCallable, Category = AI)
+		void SeePlayer(APawn* Character);
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+		void HearPlayer(APawn* Character, const FVector& location, float volume);
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AnimationValue, meta = (AllowPrivateAccess = "true"))
 		UBoolProperty* BPstopAttack;
 
@@ -39,6 +45,9 @@ class MYPROJECT2_API AEnemyClass : public ACharacter
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AnimationValue, meta = (AllowPrivateAccess = "true"))
 		UBoolProperty* BPotherAnimation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AI, meta = (AllowPrivateAccess = "true"))
+		class UPawnSensingComponent* AImovement;
 
 	class AMyProject2Character* character;
 	TArray<AActor*> foundCharacter;
@@ -50,6 +59,12 @@ public:
 		bool attack;
 
 	float attackDamage;
+
+	float MaximumSpeed;
+
+	float enemyVision;
+
+	bool ball;
 
 	float Getattackdamage() { return attackDamage; };
 

@@ -18,6 +18,7 @@
 #include "UObject/UnrealType.h"
 #include "EnemyClass.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/PawnNoiseEmitterComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AMyProject2Character

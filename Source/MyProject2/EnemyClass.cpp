@@ -4,6 +4,10 @@
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/InputComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Controller.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Life.h"
 #include "Components/TextRenderComponent.h"
@@ -12,6 +16,7 @@
 #include "MyProject2Character.h"
 #include "Animation/AnimInstance.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Perception/PawnSensingComponent.h"
 
 // Sets default values
 AEnemyClass::AEnemyClass()
@@ -27,6 +32,22 @@ AEnemyClass::AEnemyClass()
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> EnemyMesh(TEXT("/Game/InfinityBladeAdversaries/Enemy/Enemy_Golem/SK_Fire_Golem.SK_Fire_Golem"));
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> WeaponMesh(TEXT("/Game/InfinityBladeAdversaries/Enemy/Enemy_Golem/SK_Enemy_Golem01_Weapon.SK_Enemy_Golem01_Weapon"));
+
+	GetCharacterMovement()->bAutoActivate = true;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
+	GetCharacterMovement()->bRunPhysicsWithNoController = true;
+	
+
+	AImovement = CreateDefaultSubobject<UPawnSensingComponent>(TEXT("Pawn_Sensor"));
+	AImovement->SensingInterval = 0.0000001f;
+	AImovement->bOnlySensePlayers = true;
+	AImovement->SetPeripheralVisionAngle(50.0f);
+	AImovement->SightRadius = 800.f;
+	AImovement->HearingThreshold = 1000.f;
+	AImovement->LOSHearingThreshold = 900.f;
+	AImovement->OnSeePawn.AddDynamic(this, &AEnemyClass::SeePlayer);
+	AImovement->OnHearNoise.AddDynamic(this, &AEnemyClass::HearPlayer);
 
 	box = CreateDefaultSubobject<UBoxComponent>(TEXT("Collision"));
 
@@ -68,6 +89,8 @@ AEnemyClass::AEnemyClass()
 
 	attack = false;
 	attackDamage = 5.0f;
+	MaximumSpeed = 200.0f;
+	enemyVision = AImovement->GetPeripheralVisionAngle();
 }
 
 // Called when the game starts or when spawned
@@ -83,10 +106,11 @@ void AEnemyClass::BeginPlay()
 	GetCapsuleComponent()->SetCapsuleSize(1.0f, GetMesh()->CalcBounds(GetMesh()->GetComponentTransform()).BoxExtent.Z / 2.0f);
 	box->SetBoxExtent(GetMesh()->CalcBounds(GetMesh()->GetComponentTransform()).BoxExtent / 2);
 	GetMesh()->SetRelativeLocation(FVector(0, 0, -GetMesh()->CalcBounds(GetMesh()->GetComponentTransform()).BoxExtent.Z / 2.0f));
-	text->SetRelativeLocationAndRotation(FVector(0, 0, GetMesh()->CalcBounds(GetMesh()->GetComponentTransform()).BoxExtent.Z), FQuat(FRotator(0, 90, 0)));
+	text->SetRelativeLocationAndRotation(FVector(0, 0, GetMesh()->CalcBounds(GetMesh()->GetComponentTransform()).BoxExtent.Z), FQuat(FRotator(0, 90.0f, 0)));
 	text->SetHorizontalAlignment(EHorizTextAligment::EHTA_Center);
 	if (GetMesh()->SkeletalMesh->GetName() == "SK_Fire_Golem")
 	{
+		box->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 		weaponMesh->AttachTo(GetMesh(), "weapon");
 		weaponMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		attackCollision->AttachTo(weaponMesh);
@@ -97,9 +121,12 @@ void AEnemyClass::BeginPlay()
 		BPstopAttack = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "StopAttack");
 		BPdisableMesh = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "disableMesh");
 		BPotherAnimation = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "rolling");
+		MaximumSpeed = 300.0f;
+		enemyVision = AImovement->GetPeripheralVisionAngle();
 	}
 	else if (GetMesh()->SkeletalMesh->GetName() == "Enemy_Bear")
 	{
+		box->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 		weaponMesh->DestroyComponent();
 		attackCollision->AttachTo(GetMesh(), "up_arm_rt");
 		attackCollision->SetBoxExtent(FVector(65.0f, 40.0f, 28.0f));
@@ -109,6 +136,8 @@ void AEnemyClass::BeginPlay()
 		attackDamage = 7.0f;
 		BPstopAttack = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "StopAttack");
 		BPdisableMesh = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "disableMesh");
+		MaximumSpeed = 200.0f;
+		enemyVision = AImovement->GetPeripheralVisionAngle();
 	}
 }
 
@@ -116,15 +145,21 @@ void AEnemyClass::BeginPlay()
 void AEnemyClass::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
 	if (DamageCooldown > 0.0f)
 		DamageCooldown -= DeltaTime;
+
 	if (_health->GetHealth() <= 0.0f)
 		Destroy();
+
 	if (attack == true)
 	{
 		if (BPstopAttack->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == true)
+		{
 			attack = false;
-		GetCharacterMovement()->MaxWalkSpeed = 0.001f;
+			attackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		}
+		GetCharacterMovement()->MaxWalkSpeed = 0.0001f;
 	}
 	else if (attackCollision->GetCollisionEnabled() == ECollisionEnabled::QueryOnly)
 	{
@@ -134,13 +169,18 @@ void AEnemyClass::Tick(float DeltaTime)
 		}
 		GetCharacterMovement()->MaxWalkSpeed = 0.0001f;
 	}
-	else if (BPotherAnimation != NULL)
-	{
-		if (BPotherAnimation->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == true)
-		GetCharacterMovement()->MaxWalkSpeed = 0.001f;
-	}
 	else
-		GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+	{
+		GetCharacterMovement()->MaxWalkSpeed = MaximumSpeed;
+	}
+	if (BPotherAnimation != NULL)
+	{
+		if (BPotherAnimation->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == false)
+		{
+			GetCharacterMovement()->MaxWalkSpeed = 0.01f;
+		}
+
+	}
 }
 
 void AEnemyClass::Damaged(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult)
@@ -158,7 +198,28 @@ void AEnemyClass::AttackPlayer(UPrimitiveComponent* HitComponent, AActor* OtherA
 	if (OtherActor == character)
 	{
 		attack = true;
-		attackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	}
+}
+void  AEnemyClass::SeePlayer(APawn* Character)
+{
+	if ((character = Cast<AMyProject2Character>(Character)) != NULL)
+	{
+		FVector DistanceBetweenActors = (character->GetActorLocation() - GetActorLocation());
+		FRotator Rotation = FRotationMatrix::MakeFromX(DistanceBetweenActors).Rotator();
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		AddMovementInput(Direction, 1.0f, true);
+	}	
+}
+void AEnemyClass::HearPlayer(APawn* Character, const FVector& location, float volume)
+{
+	if ((character = Cast<AMyProject2Character>(Character)) != NULL)
+	{
+		FVector Angle = (character->GetActorLocation() - GetActorLocation());
+		FRotator Rotation = FRotationMatrix::MakeFromX(Angle).Rotator();
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		AddMovementInput(Direction, 1.0f, true);
 	}
 }
 
