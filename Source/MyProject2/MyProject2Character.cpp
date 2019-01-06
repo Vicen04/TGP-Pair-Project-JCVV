@@ -62,6 +62,8 @@ AMyProject2Character::AMyProject2Character()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	noiseCharacter = CreateDefaultSubobject<UPawnNoiseEmitterComponent>(TEXT("Noise"));
+
 	_health = CreateDefaultSubobject<ULife>(TEXT("Health"));
 	_health->SetHealth(100);
 
@@ -79,7 +81,7 @@ AMyProject2Character::AMyProject2Character()
 	SwordCollision->SetNotifyRigidBodyCollision(true);
 	SwordCollision->CanCharacterStepUpOn = ECanBeCharacterBase::ECB_No;
 	SwordCollision->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
-	SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
 	SwordCollision->SetCollisionEnabled(ECollisionEnabled::Type::QueryOnly);
 	
 	
@@ -144,6 +146,7 @@ void AMyProject2Character::BeginPlay()
 	Super::BeginPlay();
 	BPattack = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "StopAttack");
 	BPcounter = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "Counter");
+	BPdisableMesh = FindField<UBoolProperty>(GetMesh()->GetAnimInstance()->GetClass(), "disableMesh");
 }
 
 void AMyProject2Character::Tick(float DeltaTime)
@@ -153,16 +156,21 @@ void AMyProject2Character::Tick(float DeltaTime)
 		DamageCooldown -= DeltaTime;
 
 	if (BPattack != NULL)
-	{
 		if (BPattack->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == true)
-		{
-			SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 			StopAttack();
+	if (BPdisableMesh != NULL)
+	{
+		if (BPdisableMesh->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == true)
+		{
+			SwordCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		}
 		else
-			SwordCollision->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+		{
+			SwordCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			MakeNoise(1.0f, this, FVector::ZeroVector);
+		}
 	}
-	
+		
 	text->SetWorldRotation(FQuat(FRotator(0,-180 + Controller->GetControlRotation().Yaw,0)));
 }
 

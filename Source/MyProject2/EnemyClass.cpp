@@ -44,8 +44,8 @@ AEnemyClass::AEnemyClass()
 	AImovement->bOnlySensePlayers = true;
 	AImovement->SetPeripheralVisionAngle(50.0f);
 	AImovement->SightRadius = 800.f;
-	AImovement->HearingThreshold = 1000.f;
-	AImovement->LOSHearingThreshold = 900.f;
+	AImovement->HearingThreshold = 1200.f;
+	AImovement->LOSHearingThreshold = 1100.f;
 	AImovement->OnSeePawn.AddDynamic(this, &AEnemyClass::SeePlayer);
 	AImovement->OnHearNoise.AddDynamic(this, &AEnemyClass::HearPlayer);
 
@@ -85,7 +85,6 @@ AEnemyClass::AEnemyClass()
 	damage = 0.0f;
 
 	box->OnComponentBeginOverlap.AddDynamic(this, &AEnemyClass::Damaged);
-	box->OnComponentHit.AddDynamic(this, &AEnemyClass::AttackPlayer);
 
 	attack = false;
 	attackDamage = 5.0f;
@@ -156,8 +155,8 @@ void AEnemyClass::Tick(float DeltaTime)
 	{
 		if (BPstopAttack->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == true)
 		{
-			attack = false;
 			attackCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			attack = false;
 		}
 		GetCharacterMovement()->MaxWalkSpeed = 0.0001f;
 	}
@@ -177,7 +176,7 @@ void AEnemyClass::Tick(float DeltaTime)
 	{
 		if (BPotherAnimation->GetPropertyValue_InContainer(GetMesh()->GetAnimInstance()) == false)
 		{
-			GetCharacterMovement()->MaxWalkSpeed = 0.01f;
+			SetActorLocation(GetActorLocation());
 		}
 
 	}
@@ -193,13 +192,6 @@ void AEnemyClass::Damaged(UPrimitiveComponent* OverlappedComponent, AActor* Othe
 	}
 }
 
-void AEnemyClass::AttackPlayer(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit)
-{
-	if (OtherActor == character)
-	{
-		attack = true;
-	}
-}
 void  AEnemyClass::SeePlayer(APawn* Character)
 {
 	if ((character = Cast<AMyProject2Character>(Character)) != NULL)
@@ -208,7 +200,11 @@ void  AEnemyClass::SeePlayer(APawn* Character)
 		FRotator Rotation = FRotationMatrix::MakeFromX(DistanceBetweenActors).Rotator();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		AddMovementInput(Direction, 1.0f, true);
+		if (FMath::Sqrt(DistanceBetweenActors.SizeSquared()) > (FMath::Sqrt((FVector(character->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), character->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), character->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()) + ((GetMesh()->CalcBounds(GetMesh()->GetComponentTransform()).BoxExtent)/ 2)).SizeSquared()))/2.2f)
+			AddMovementInput(Direction, 1.0f, true);
+		else
+			if (attackCollision->GetCollisionEnabled() == ECollisionEnabled::NoCollision)
+			attack = true;
 	}	
 }
 void AEnemyClass::HearPlayer(APawn* Character, const FVector& location, float volume)
@@ -217,9 +213,11 @@ void AEnemyClass::HearPlayer(APawn* Character, const FVector& location, float vo
 	{
 		FVector Angle = (character->GetActorLocation() - GetActorLocation());
 		FRotator Rotation = FRotationMatrix::MakeFromX(Angle).Rotator();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		AddMovementInput(Direction, 1.0f, true);
+		if (Rotation.Yaw > 140.0f || Rotation.Yaw < -140.0f)
+		{
+			const FRotator YawRotation(0, -Rotation.Yaw/100.0f, 0);
+			AddActorLocalRotation(YawRotation);
+		}
 	}
 }
 

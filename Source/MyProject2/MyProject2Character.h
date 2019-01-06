@@ -40,6 +40,12 @@ class AMyProject2Character : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AnimationValue, meta = (AllowPrivateAccess = "true"))
 		UBoolProperty* BPcounter;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = AnimationValue, meta = (AllowPrivateAccess = "true"))
+		UBoolProperty* BPdisableMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Noise, meta = (AllowPrivateAccess = "true"))
+		class UPawnNoiseEmitterComponent* noiseCharacter;
+
 	class AEnemyClass* enemy;
 	TArray<AActor*> foundEnemies;
 
