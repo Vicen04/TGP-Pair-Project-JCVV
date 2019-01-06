@@ -28,9 +28,6 @@ class MYPROJECT2_API AEnemyClass : public ACharacter
 	UFUNCTION(BlueprintCallable, Category = Damage)
 		void Damaged(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
 
-	UFUNCTION(BlueprintCallable, Category = Damage)
-		void AttackPlayer(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
-
 	UFUNCTION(BlueprintCallable, Category = AI)
 		void SeePlayer(APawn* Character);
 
